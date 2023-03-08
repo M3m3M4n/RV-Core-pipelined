@@ -1,0 +1,200 @@
+// Interface to verilator generated CPP code
+
+#include "SDRAMController.h"
+
+#include <cstdlib>
+#include <csignal>
+#include <cstring>
+#include <string>
+#include <vector>
+
+SDRAMControllerTB* p_tb = nullptr;
+VSDRAMController* p_VSDRAMController = nullptr;
+VerilatedContext* p_context = nullptr;
+
+void cleanup()
+{
+	if (p_tb){
+		delete p_tb;
+		p_tb = nullptr;
+	}
+	if (p_VSDRAMController) {
+		p_VSDRAMController = nullptr;
+	}
+	if (p_context) {
+		delete p_context;
+		p_context = nullptr;
+	}
+}
+
+void cleanup_exit()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
+}
+
+void sigint_handler(int num)
+{
+	DEBUG("SIGINT caught, exiting...");
+	cleanup_exit();
+}
+
+void install_signal_handlers()
+{
+	// SIGINT
+	struct sigaction sa;
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	// Restart functions if interrupted by handler
+	// (might just call signal() instead)
+	sa.sa_flags = SA_RESTART; 
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		DEBUG("SIGACTION failed!");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void cycle()
+{
+	p_context->timeInc(1);
+	p_tb->cycle();
+}
+
+void cycle_all()
+{
+    // add all tbs to a vector, pass as arg to this
+    // with each tb get its context and inc time? - possible duplicate inc, find way to avoid
+    // call tb cycle last
+}
+
+/* idx: memory byte index, this will be set to start of its block
+ * source_buffer: byte data array
+ * len: source buffer length in bytes
+ * THIS USE VALUES DEFINED IN SDRAM.h, BE SURE TO MATCH THEM WITH SDRAMController.sv
+ */
+void sdram_write(uint32_t idx, const char *source_buffer, size_t len)
+{
+	// convert to data block, each has bit width of sdram data width
+	uint32_t block_idx = idx / (O_DATA_BLOCK_SIZE);
+	SelectTypeWidth<O_DATA_BIT_WIDTH>::type *p_block_buffer = (SelectTypeWidth<O_DATA_BIT_WIDTH>::type *)source_buffer;
+	size_t block_buffer_len = len / (O_DATA_BLOCK_SIZE); // floor trunc to block size
+	size_t burst_times = block_buffer_len / O_BURST_LENGTH; // trunc again to burst length
+
+	for (int b = 0; b < burst_times; b++) {
+		assert(block_idx < O_NBLOCK);
+		// Burst
+		// Write signals
+		p_tb->getModulePointer()->i_we = 1;
+		p_tb->getModulePointer()->i_req = 1;
+		p_tb->getModulePointer()->i_addr = block_idx;
+		p_tb->getModulePointer()->i_data = p_block_buffer[0]; // first data block
+		// cycle til ack
+		while (p_tb->getModulePointer()->o_ack == 0) {
+			cycle();
+		}
+		p_tb->getModulePointer()->i_req = 0;
+		// send the rest of the data blocks
+		// allow over write? warp around?
+		for (int d = 1; d < O_BURST_LENGTH; d++){
+			p_tb->getModulePointer()->i_data = p_block_buffer[d];
+			cycle();
+		}
+		p_tb->getModulePointer()->i_we = 0;
+		cycle();
+		p_block_buffer += O_BURST_LENGTH;
+		block_idx += O_BURST_LENGTH;
+		block_buffer_len -= O_BURST_LENGTH;
+	}
+}
+
+/* idx: memory byte index, this will be set to start of its block
+ * len: source buffer length in bytes
+ * THIS USE VALUES DEFINED IN SDRAM.h, BE SURE TO MATCH THEM WITH SDRAMController.sv
+ */
+char *sdram_read(uint32_t idx, size_t len)
+{
+	// convert to data block, each has bit width of sdram data width
+	uint32_t block_idx = idx / (O_DATA_BLOCK_SIZE);
+	size_t block_buffer_len = len / (O_DATA_BLOCK_SIZE); // floor trunc to block size
+	size_t burst_times = block_buffer_len / O_BURST_LENGTH; // trunc again to burst length
+	char *target_buffer = new char[block_buffer_len * (O_DATA_BLOCK_SIZE + 1)]();
+	SelectTypeWidth<O_DATA_BIT_WIDTH>::type *p_block_buffer = (SelectTypeWidth<O_DATA_BIT_WIDTH>::type *)target_buffer;
+
+	for (int b = 0; b < burst_times; b++) {
+		// Burst
+		// Read signals
+		p_tb->getModulePointer()->i_we = 0;
+		p_tb->getModulePointer()->i_req = 1;
+		p_tb->getModulePointer()->i_addr = block_idx + b * O_BURST_LENGTH;
+		// cycle til ack
+		while (p_tb->getModulePointer()->o_ack == 0) {
+			cycle();
+		}
+		p_tb->getModulePointer()->i_req = 0;
+		// cycle til valid
+		// valid high 1 cycle after data avail from sdram, so the data should be read the cycle before (from sdram)
+		// because data is 1 cycle before valid, save that and write at valid
+		while (p_tb->getModulePointer()->o_valid == 0) { 
+			cycle();
+			if (p_tb->getModulePointer()->o_valid) {
+				p_block_buffer[b * O_BURST_LENGTH] = p_tb->getModulePointer()->o_data;
+			}
+		}
+		for (int d = 1; d < O_BURST_LENGTH; d++) {
+			cycle();
+			p_block_buffer[b * O_BURST_LENGTH + d] = p_tb->getModulePointer()->o_data;
+		}
+	}
+	return target_buffer;
+}
+
+int main(int argc, char **argv)
+{
+	install_signal_handlers();
+	p_context = new VerilatedContext();
+	p_context->commandArgs(argc, argv);
+	p_tb = new SDRAMControllerTB(p_context, 500000);
+	if (!p_tb) {
+		DEBUG("Object creation failed!");
+		exit(EXIT_FAILURE);
+	}
+	p_VSDRAMController = p_tb->getModulePointer();
+	if (!p_tb) {
+		DEBUG("Cannot get top module pointer!");
+		exit(EXIT_FAILURE);
+	}
+	p_context->traceEverOn(true);
+	p_tb->traceOn("SDRAMController.vcd");
+	p_context->timeInc(1); // reset also cycle
+	p_tb->reset();
+	
+	const char *sample_data = "Good evening twitter this is your boy edp445";
+	sdram_write(0, sample_data, strlen(sample_data));
+	char *output_data = sdram_read(0, strlen(sample_data));
+	if (!strcmp(sample_data, output_data)) {
+		DEBUG("Data verified: %s", output_data);
+	}
+	else {
+		DEBUG("Output data mismatch: \"%s\" != \"%s\"", output_data, sample_data);
+		DEBUG("Data dump length: %ld", strlen(sample_data));
+		DEBUG("Hex dump:");
+		std::cout << "\t";
+		for (int i = 0 ; i < strlen(sample_data); i++) {
+			std::cout << std::hex << (int)output_data[i] << " ";
+		}
+		std::cout << "\n";
+	}
+	delete output_data;
+/*
+	while(!p_tb->isDone()) {
+		// Increase time seperately from cycle counter for now, incase multiple module use the same context
+		p_context->timeInc(1);
+		p_tb->cycle();
+	} 
+*/
+	for (int i = 0 ; i < 5; i++) {
+		cycle();
+	}
+
+	cleanup_exit();
+}

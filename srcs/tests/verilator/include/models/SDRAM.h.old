@@ -1,0 +1,183 @@
+/* Model for testing simple SDRAM controller 
+ * No interleaving supported, single acive bank at a time
+ * simulation: https://github.com/ZipCPU/xulalx25soc/tree/master/bench/cpp
+ * gg: verilator test sdram controller
+ * https://www.reddit.com/r/FPGA/comments/a5e3ok/recommend_an_sdram_model_for_verilator/
+ * https://github.com/ZipCPU/xulalx25soc/blob/master/bench/cpp/sdramsim.h
+ */
+
+#ifndef SDRAM_H
+
+#include <cmath>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+
+#include "../debug.h"
+
+// ==================================================
+template<uint32_t Max>
+struct RequiredBits
+{
+    enum { value =
+        Max <= 0xff       ?  8 :
+        Max <= 0xffff     ? 16 :
+        Max <= 0xffffffff ? 32 :
+                            64
+    };
+};
+
+template<uint32_t Width>
+struct AlignBitWidth
+{
+    enum { value =
+        Width <= 8        ?  8 :
+        Width <= 16       ? 16 :
+        Width <= 32       ? 32 :
+        Width <= 64       ? 64 :
+                            -1
+    };
+};
+
+// https://stackoverflow.com/questions/7038797/automatically-pick-a-variable-type-big-enough-to-hold-a-specified-number
+// https://stackoverflow.com/questions/38467025/template-specialization-with-empty-brackets-and-struct
+template<int bits> struct SelectInteger_;
+template<> struct SelectInteger_ <8> { typedef uint8_t  type; };
+template<> struct SelectInteger_<16> { typedef uint16_t type; };
+template<> struct SelectInteger_<32> { typedef uint32_t type; };
+template<> struct SelectInteger_<64> { typedef uint64_t type; };
+
+template<uint32_t Max>
+struct SelectTypeMaxInt : SelectInteger_<RequiredBits<Max>::value> {};
+
+template<uint32_t Max>
+struct SelectTypeWidth : SelectInteger_<AlignBitWidth<Max>::value> {};
+
+// SDRAM spec, all listed here, only needed ones go in class
+// O == option, T == timing (ns), C == clock timing
+// ==================================================
+// MHz
+#define O_CLK_FREQ         150 
+// Bits
+#define O_SIZE             67108864
+// Byte
+#define O_SIZE_BYTE        O_SIZE / 8
+//
+#define O_SIZE_BIT_WIDTH   23 // ceil(log2(O_SIZE_BYTE))
+// Number of banks
+#define O_NBANK            4 
+// DQ0-DQ31
+#define O_DATA_BIT_WIDTH   32
+#define O_DATA_BLOCK_SIZE  O_DATA_BIT_WIDTH / 8 // bytes
+// Number of bits needed to address individual bytes in block
+// #define O_BLOCK_ADDR_BITS  4 // ceil(log2(O_DATA_BLOCK_SIZE)) // come up with better name pls
+// Number of "block" in this SDRAM
+// Each "block" consists of O_DATA_BIT_WIDTH bits or O_DATA_BLOCK_SIZE bytes
+#define O_NBLOCK           O_SIZE / O_DATA_BIT_WIDTH
+#define O_BLOCK_BIT_WIDTH  21 // ceil(log2(O_NBLOCK))
+// BA0-BA1
+#define O_BANK_BIT_WIDTH   2 // ceil(log2(O_NBANK))
+// A0-A10
+#define O_ADDR_BIT_WIDTH   11
+// A0-A10 in BankActive
+#define O_ROW_BIT_WIDTH    O_ADDR_BIT_WIDTH 
+// A0-7 in Read / Write
+#define O_COLUMN_BIT_WIDTH 8 // ceil(log2(O_SIZE / O_DATA_BIT_WIDTH)) - O_BANK_BIT_WIDTH - O_ROW_BIT_WIDTH
+// t[CAC] (min) ≤ CAS Latency X t[CK]
+// t[CAC] is not mentioned anywhere else in the datasheet except this formula
+// Use value from others 2=below 133MHz, 3=above 133MHz
+#define C_CAS_LATENCY      3 // ONLY SERVE AS DEFAULT VALUE, use v_cas_latency
+// 1, 2, 4, 8, page
+#define O_BURST_LENGTH     1 // ONLY SERVE AS DEFAULT VALUE, use v_burst_length
+#define O_PAGE_SIZE        256
+// Mask
+#define O_DQM_BIT_WIDTH    4
+// ==================================================
+// Timings in nanoseconds, some converted from tck @ 166MHz
+// -- startup delay, power on sequence
+#define T_DESL             200000.0
+// -- mode register set cycle time
+#define T_MRD              12.0
+// -- row cycle time
+#define T_RC               60.0
+// -- RAS to CAS delay
+#define T_RCD              18.0
+// -- precharge to activate delay
+#define T_RP               18.0
+// -- write recovery time
+#define T_WR               12.0
+// -- average refresh interval
+#define T_REFI             15600.0
+// -- max refresh interval
+// Need to refresh 4096 times in 64ms => need 1 refresh cmd every 15625ns
+#define T_MAX_REFI         15625.0
+// ==================================================
+// Clock based timings
+// ns
+#define T_CLK_PERIOD       1000.0 / O_CLK_FREQ
+#define C_INIT_WAIT        30000 // ceil(T_DESL / T_CLK_PERIOD)
+#define C_LOAD_MODE_WAIT   2 // ceil(T_MRD / T_CLK_PERIOD)
+#define C_ACTIVE_WAIT      3 // ceil(T_RCD / T_CLK_PERIOD)
+#define C_REFRESH_WAIT     9 // ceil(T_RC / T_CLK_PERIOD)
+#define C_PRECHARGE_WAIT   3 // ceil(T_RP / T_CLK_PERIOD)
+#define C_READ_WAIT        C_CAS_LATENCY + O_BURST_LENGTH //ONLY SERVE AS DEFAULT VALUE,  use v_read_wait
+#define C_WRITE_WAIT       6 // ceil((T_WR + T_RP) / T_CLK_PERIOD) + O_BURST_LENGTH // ONLY SERVE AS DEFAULT VALUE, use v_write_wait
+#define C_REFRESH_INTERVAL 2340 // floor(T_REFI / T_CLK_PERIOD)
+// ==================================================
+// Extras
+#define C_MAX_REF_INTERVAL 2343 // floor(T_MAX_REFI / T_CLK_PERIOD)
+
+// ==================================================
+class SDRAM 
+{
+    // variables
+    // ==================================================
+    // Modified by MRS
+    uint8_t v_cas_latency;
+    uint8_t v_burst_length; // full page when >8
+    uint8_t v_read_wait, v_write_wait;
+    // ==================================================
+    // Backing memory for simulated SDRAM, byte addressible
+    uint8_t *p_v_backing_mem;
+    // ==================================================
+    // State machine
+    enum state_t {INIT_STARTUP_DELAY, INIT_PRECHARGE, INIT_REFRESH1, INIT_REFRESH2, INIT_MRS, 
+                    WORK_IDLE, WORK_ACTIVE, WORK_READ, WORK_WRITE, WORK_REFRESH};
+    uint8_t v_init_refreshed, v_init_MRSed, v_init_done; // flags used during init
+    state_t v_state; // Main state machine
+    uint32_t v_wait_timer, v_refresh_timer; // Shared between all banks, no interleaving, counting down
+    // ==================================================
+    // Saved addrs
+    SelectTypeWidth<O_BANK_BIT_WIDTH>::type  v_bank_addr_active, v_bank_addr_rw; // Bank addr
+    SelectTypeWidth<O_ADDR_BIT_WIDTH>::type  v_row_addr, v_col_addr;
+    SelectTypeWidth<O_BLOCK_BIT_WIDTH>::type v_full_addr;
+
+    // Funcs
+    // ==================================================
+    void mode_register_set(
+        SelectTypeWidth<O_BANK_BIT_WIDTH>::type ba,
+        SelectTypeWidth<O_ADDR_BIT_WIDTH>::type addr
+    );
+
+public:
+    SDRAM(void);
+    ~SDRAM(void);
+    void cycle(
+        uint8_t cke, uint8_t cs_n, uint8_t ras_n, uint8_t cas_n, uint8_t we_n,
+		SelectTypeWidth<O_BANK_BIT_WIDTH>::type ba,
+        SelectTypeWidth<O_ADDR_BIT_WIDTH>::type addr,
+        SelectTypeWidth<O_DATA_BIT_WIDTH>::type data_in,
+        SelectTypeWidth<O_DATA_BIT_WIDTH>::type &data_out // reference
+        // SelectInteger<O_DQM_BIT_WIDTH>::type dqm,
+        // SelectInteger<O_DATA_BIT_WIDTH>::type dq
+    );
+    // Assign data region (byte sized) to SDRAM backing memory started from idx
+    void mem_assign(SelectTypeWidth<O_SIZE_BIT_WIDTH>::type idx,
+                    uint8_t *data, size_t size);
+    // Assign data region (block sized) to BLOCK INDEX idx
+    void mem_block_assign(SelectTypeWidth<O_BLOCK_BIT_WIDTH>::type block_addr,
+                            uint8_t *data, size_t size);
+};
+
+#endif

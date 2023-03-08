@@ -1,0 +1,119 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Fri Jun 17 03:49:54 2022
+[*]
+[dumpfile] "/home/hoang/Desktop/rv/RV-Core/build_test/TB_memtest2.vcd"
+[dumpfile_mtime] "Fri Jun 17 03:47:51 2022"
+[dumpfile_size] 2899
+[savefile] "/home/hoang/Desktop/rv/RV-Core/tests/TB_memtest2.gtkw"
+[timestart] 0
+[size] 1920 1000
+[pos] -1 -1
+*-14.788340 55000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TB_MemTest2.
+[treeopen] TB_MemTest2.UUT.
+[sst_width] 211
+[signals_width] 193
+[sst_expanded] 1
+[sst_vpaned_height] 283
+@28
+TB_MemTest2.UUT.i_clk
+@22
+TB_MemTest2.UUT.i_addr[31:0]
+TB_MemTest2.wd[31:0]
+@28
+TB_MemTest2.UUT.i_we
+TB_MemTest2.UUT._we0
+TB_MemTest2.UUT._we1
+TB_MemTest2.UUT._we2
+TB_MemTest2.UUT._we3
+@22
+TB_MemTest2.UUT._rd0[7:0]
+TB_MemTest2.UUT._rd1[7:0]
+TB_MemTest2.UUT._rd2[7:0]
+TB_MemTest2.UUT._rd3[7:0]
+@c00022
+TB_MemTest2.UUT.o_rd[31:0]
+@28
+(0)TB_MemTest2.UUT.o_rd[31:0]
+(1)TB_MemTest2.UUT.o_rd[31:0]
+(2)TB_MemTest2.UUT.o_rd[31:0]
+(3)TB_MemTest2.UUT.o_rd[31:0]
+(4)TB_MemTest2.UUT.o_rd[31:0]
+(5)TB_MemTest2.UUT.o_rd[31:0]
+(6)TB_MemTest2.UUT.o_rd[31:0]
+(7)TB_MemTest2.UUT.o_rd[31:0]
+(8)TB_MemTest2.UUT.o_rd[31:0]
+(9)TB_MemTest2.UUT.o_rd[31:0]
+(10)TB_MemTest2.UUT.o_rd[31:0]
+(11)TB_MemTest2.UUT.o_rd[31:0]
+(12)TB_MemTest2.UUT.o_rd[31:0]
+(13)TB_MemTest2.UUT.o_rd[31:0]
+(14)TB_MemTest2.UUT.o_rd[31:0]
+(15)TB_MemTest2.UUT.o_rd[31:0]
+(16)TB_MemTest2.UUT.o_rd[31:0]
+(17)TB_MemTest2.UUT.o_rd[31:0]
+(18)TB_MemTest2.UUT.o_rd[31:0]
+(19)TB_MemTest2.UUT.o_rd[31:0]
+(20)TB_MemTest2.UUT.o_rd[31:0]
+(21)TB_MemTest2.UUT.o_rd[31:0]
+(22)TB_MemTest2.UUT.o_rd[31:0]
+(23)TB_MemTest2.UUT.o_rd[31:0]
+(24)TB_MemTest2.UUT.o_rd[31:0]
+(25)TB_MemTest2.UUT.o_rd[31:0]
+(26)TB_MemTest2.UUT.o_rd[31:0]
+(27)TB_MemTest2.UUT.o_rd[31:0]
+(28)TB_MemTest2.UUT.o_rd[31:0]
+(29)TB_MemTest2.UUT.o_rd[31:0]
+(30)TB_MemTest2.UUT.o_rd[31:0]
+(31)TB_MemTest2.UUT.o_rd[31:0]
+@1401200
+-group_end
+@22
+TB_MemTest2.UUT.i_wd[31:0]
+@28
+TB_MemTest2.UUT.i_ext_type
+TB_MemTest2.UUT.i_mask_type[1:0]
+@200
+-
+-
+@22
+TB_MemTest2.UUT.row0.i_addr[11:0]
+@28
+TB_MemTest2.UUT.row0.i_we
+@22
+TB_MemTest2.UUT.row0.i_wd[7:0]
+TB_MemTest2.UUT.row0.o_rd[7:0]
+@200
+-
+@22
+TB_MemTest2.UUT.row1.i_addr[11:0]
+TB_MemTest2.UUT.row1.i_wd[7:0]
+@28
+TB_MemTest2.UUT.row1.i_we
+@22
+TB_MemTest2.UUT.row1.o_rd[7:0]
+@200
+-
+@22
+TB_MemTest2.UUT.row2.i_addr[11:0]
+TB_MemTest2.UUT.row2.i_wd[7:0]
+@28
+TB_MemTest2.UUT.row2.i_we
+@22
+TB_MemTest2.UUT.row2.o_rd[7:0]
+@200
+-
+@22
+TB_MemTest2.UUT.row3.i_addr[11:0]
+TB_MemTest2.UUT.row3.i_wd[7:0]
+@28
+TB_MemTest2.UUT.row3.i_we
+@22
+TB_MemTest2.UUT.row3.o_rd[7:0]
+@200
+-
+@29
+TB_MemTest2.UUT.i_clk
+[pattern_trace] 1
+[pattern_trace] 0

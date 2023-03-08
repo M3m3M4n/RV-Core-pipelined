@@ -1,0 +1,219 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Wed Jun  8 13:42:34 2022
+[*]
+[dumpfile] "TB_top.vcd"
+[dumpfile_mtime] "Wed Jun  8 13:25:22 2022"
+[dumpfile_size] 1589293
+[savefile] "TB_top.gtkw"
+[timestart] 1004530
+[size] 1920 1000
+[pos] -1 -1
+*-12.802554 1026000 -1 576000 1040000 1024000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[markername] BDIV START
+[markername] CPROGRAM END
+[markername] DDIV END
+[treeopen] dataMemStageBlock.
+[treeopen] dataWritebackStageBlock.
+[sst_width] 211
+[signals_width] 387
+[sst_expanded] 1
+[sst_vpaned_height] 284
+@28
+TB_Top.UUT.dataPipeline.i_clk
+@200
+-
+-
+-FETCH STAGE
+@22
+TB_Top.UUT.dataPipeline.f_pc[31:0]
+TB_Top.UUT.dataFetchStageBlock.o_instr[31:0]
+@200
+-
+-
+-DECODE STAGE
+@22
+TB_Top.UUT.dataPipeline.d_pc[31:0]
+@200
+-controls
+@28
+TB_Top.UUT.controlPipeline.d_mux_alu_src_a
+TB_Top.UUT.controlPipeline.d_mux_alu_src_b
+@200
+-register file
+@22
+TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_a1[4:0]
+TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_a2[4:0]
+TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_a3[4:0]
+@c00022
+TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+@28
+(0)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(1)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(2)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(3)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(4)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(5)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(6)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(7)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(8)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(9)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(10)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(11)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(12)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(13)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(14)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(15)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(16)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(17)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(18)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(19)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(20)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(21)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(22)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(23)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(24)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(25)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(26)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(27)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(28)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(29)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(30)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+(31)TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_wd3[31:0]
+@1401200
+-group_end
+@28
+TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.i_we3
+@22
+TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.o_rd1[31:0]
+TB_Top.UUT.dataPipeline.dataDecodeStageBlock.registerFile.o_rd2[31:0]
+@200
+-signals
+@22
+TB_Top.UUT.dataPipeline.d_rs1[4:0]
+TB_Top.UUT.dataPipeline.d_rs2[4:0]
+TB_Top.UUT.dataPipeline.d_rd[4:0]
+@200
+-
+-
+-EXECSTAGE
+@23
+TB_Top.UUT.dataPipeline.e_pc[31:0]
+@c00022
++{rd1 00} TB_Top.UUT.dataPipeline.e_rd1[31:0]
+@28
+(0)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(1)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(2)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(3)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(4)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(5)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(6)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(7)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(8)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(9)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(10)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(11)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(12)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(13)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(14)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(15)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(16)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(17)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(18)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(19)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(20)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(21)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(22)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(23)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(24)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(25)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(26)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(27)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(28)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(29)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(30)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+(31)TB_Top.UUT.dataPipeline.e_rd1[31:0]
+@1401200
+-group_end
+@22
++{rd2 00} TB_Top.UUT.dataPipeline.e_rd2[31:0]
++{TB_Top.UUT.dataExecStageBlock.i_m_e_foward_data_alu[31:0] 10} TB_Top.UUT.dataExecStageBlock.i_m_e_foward_data_alu[31:0]
++{TB_Top.UUT.dataExecStageBlock.i_m_e_foward_data_immext[31:0] 11} TB_Top.UUT.dataExecStageBlock.i_m_e_foward_data_immext[31:0]
++{TB_Top.UUT.dataExecStageBlock.i_w_e_foward_data[31:0] 01} TB_Top.UUT.dataExecStageBlock.i_w_e_foward_data[31:0]
+TB_Top.UUT.dataPipeline.e_rd[4:0]
+TB_Top.UUT.dataPipeline.e_rs1[4:0]
+TB_Top.UUT.dataPipeline.e_rs2[4:0]
+@c00028
++{foward mux a} TB_Top.UUT.dataExecStageBlock.i_mux_alu_forward_src_a[1:0]
+@28
+(0)TB_Top.UUT.dataExecStageBlock.i_mux_alu_forward_src_a[1:0]
+(1)TB_Top.UUT.dataExecStageBlock.i_mux_alu_forward_src_a[1:0]
+@1401200
+-group_end
+@c00028
++{forward mux b} TB_Top.UUT.dataExecStageBlock.i_mux_alu_forward_src_b[1:0]
+@28
+(0)TB_Top.UUT.dataExecStageBlock.i_mux_alu_forward_src_b[1:0]
+(1)TB_Top.UUT.dataExecStageBlock.i_mux_alu_forward_src_b[1:0]
+@1401200
+-group_end
+@28
+TB_Top.UUT.dataExecStageBlock.i_mux_alu_src_a
+TB_Top.UUT.dataExecStageBlock.i_mux_alu_src_b
+@22
+TB_Top.UUT.dataExecStageBlock.i_immext[31:0]
+@28
+TB_Top.UUT.e_mux_final_result_src[1:0]
+@22
+TB_Top.UUT.dataExecStageBlock.alu.i_a[31:0]
+TB_Top.UUT.dataExecStageBlock.alu.i_b[31:0]
+TB_Top.UUT.dataExecStageBlock.alu.o_result[31:0]
+@200
+-
+-
+-MEMSTAGE
+@22
+TB_Top.UUT.dataPipeline.m_pc_p_4[31:0]
+@200
+-signals
+@22
+TB_Top.UUT.dataPipeline.m_pc_p_4[31:0]
+TB_Top.UUT.dataPipeline.m_immext[31:0]
+TB_Top.UUT.dataPipeline.m_rd[4:0]
+@200
+-datamem
+@22
++{address in} TB_Top.UUT.dataPipeline.m_alu_result[31:0]
+@28
+dataMemStageBlock.dataMemory.i_we
+@22
+TB_Top.UUT.dataPipeline.m_mem_data[31:0]
+TB_Top.UUT.dataPipeline.m_memory_readout[31:0]
+@200
+-
+-
+-WRITESTAGE
+@28
+TB_Top.UUT.controlPipeline.w_en_regfile_write
+@22
+TB_Top.UUT.dataPipeline.w_rd[4:0]
+@28
+dataWritebackStageBlock.i_mux_final_result_src[1:0]
+@22
++{dataWritebackStageBlock.i_alu_result 00} dataWritebackStageBlock.i_alu_result[31:0]
++{dataWritebackStageBlock.i_memory_readout 01} dataWritebackStageBlock.i_memory_readout[31:0]
++{dataWritebackStageBlock.i_pc_p_4 10} dataWritebackStageBlock.i_pc_p_4[31:0]
++{TB_Top.UUT.dataPipeline.w_immext 11} TB_Top.UUT.dataPipeline.w_immext[31:0]
+dataWritebackStageBlock.o_wb[31:0]
+@200
+-
+-
+-HAZARD
+@28
+hazardBlock.o_data_f_stall
+hazardBlock.o_data_fd_flush
+hazardBlock.o_data_fd_stall
+hazardBlock.o_de_flush
+[pattern_trace] 1
+[pattern_trace] 0

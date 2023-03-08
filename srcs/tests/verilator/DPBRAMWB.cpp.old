@@ -1,0 +1,295 @@
+// Interface to verilator generated CPP code
+
+#include "DPBRAMWB.h"
+
+#include <cstdlib>
+#include <csignal>
+#include <string>
+
+DPBRAMWBTB* p_tb = nullptr;
+VDPBRAMWB* p_VDPBRAMWB = nullptr;
+VerilatedContext* p_context = nullptr;
+
+void cleanup()
+{
+	if (p_tb){
+		delete p_tb;
+		p_tb = nullptr;
+	}
+	if (p_VDPBRAMWB) {
+		p_VDPBRAMWB = nullptr;
+	}
+	if (p_context) {
+		delete p_context;
+		p_context = nullptr;
+	}
+}
+
+void cleanup_exit()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
+}
+
+void sigint_handler(int num)
+{
+	DEBUG("SIGINT caught, exiting...");
+	cleanup_exit();
+}
+
+void install_signal_handlers()
+{
+	// SIGINT
+	struct sigaction sa;
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	// Restart functions if interrupted by handler
+	// (might just call signal() instead)
+	sa.sa_flags = SA_RESTART; 
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		DEBUG("SIGACTION failed!");
+		exit(EXIT_FAILURE);
+	}
+}
+
+int main(int argc, char **argv)
+{
+	install_signal_handlers();
+	p_context = new VerilatedContext();
+	p_context->commandArgs(argc, argv);
+	p_tb = new DPBRAMWBTB(p_context); //, 500000);
+	if (!p_tb) {
+		DEBUG("Object creation failed!");
+		exit(EXIT_FAILURE);
+	}
+	p_VDPBRAMWB = p_tb->getModulePointer();
+	if (!p_tb) {
+		DEBUG("Cannot get top module pointer!");
+		exit(EXIT_FAILURE);
+	}
+	p_context->traceEverOn(true);
+	p_tb->traceOn("DPBRAMWB.vcd");
+	p_tb->reset();
+
+	/*
+	while(!p_tb->isDone()) {
+		// Increase time seperately from cycle counter for now, incase multiple module use the same context
+		p_context->timeInc(1);
+		p_tb->cycle();
+	} 
+	*/
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    // WRITE WB
+    p_VDPBRAMWB->i_wb_cyc = 1;
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_data = 0xabad1dea;
+    p_VDPBRAMWB->i_wb_sel = 0b1111;
+    p_VDPBRAMWB->i_wb_we  = 1;
+    p_VDPBRAMWB->i_wb_addr = 0x20000000;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_VDPBRAMWB->i_wb_we  = 0;
+	p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_data = 0xabad1dea;
+    p_VDPBRAMWB->i_wb_sel = 0b0011;
+    p_VDPBRAMWB->i_wb_we  = 1;
+    p_VDPBRAMWB->i_wb_addr = 0x20000004;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_VDPBRAMWB->i_wb_we  = 0;
+	p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_data = 0xabad1dea;
+    p_VDPBRAMWB->i_wb_sel = 0b0001;
+    p_VDPBRAMWB->i_wb_we  = 1;
+    p_VDPBRAMWB->i_wb_addr = 0x20000008;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_VDPBRAMWB->i_wb_we  = 0;
+	p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+
+    // READ 1 WB
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b1111;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000000;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b0011;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000000;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b0001;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000000;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    // READ 2 WB
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b1111;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000004;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b0011;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000004;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b0001;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000004;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    // READ 3 WB
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b1111;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000008;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b0011;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000008;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_stb = 1;
+    p_VDPBRAMWB->i_wb_sel = 0b0001;
+    p_VDPBRAMWB->i_wb_we  = 0;
+    p_VDPBRAMWB->i_wb_addr = 0x20000008;
+    p_context->timeInc(1);
+	p_tb->cycle();
+    p_VDPBRAMWB->i_wb_stb = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_wb_cyc = 0;
+    p_VDPBRAMWB->i_wb_stb = 0;
+
+    // READ 1 port 2
+    p_VDPBRAMWB->i_p2_en = 1;
+    p_VDPBRAMWB->i_p2_addr = 0x20000000;
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_p2_addr = 0x20000004;
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_p2_addr = 0x20000008;
+    p_context->timeInc(1);
+	p_tb->cycle();
+
+    p_VDPBRAMWB->i_p2_en = 0;
+    p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+    p_context->timeInc(1);
+	p_tb->cycle();
+	
+
+	cleanup_exit();
+}

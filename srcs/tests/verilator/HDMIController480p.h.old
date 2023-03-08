@@ -1,0 +1,106 @@
+#ifndef HDMIController480p_H
+#define HDMIController480p_H
+
+#include "include/testbench.h"
+#include "VHDMIController480p.h"
+#include "VHDMIController480p___024root.h"
+
+class HDMIController480pTB : public TestBench<VHDMIController480p>
+{
+    // All compare to tmds clk
+    unsigned int pixel_clk_cnt;
+    unsigned int cpu_clk_cnt;
+    void tick();
+public:
+    HDMIController480pTB(VerilatedContext* p_context, long long total_cycle = -1) : 
+        pixel_clk_cnt(-1),
+        cpu_clk_cnt(-1),
+        TestBench<VHDMIController480p> (p_context, total_cycle) {};
+    void cycle(unsigned int times = 1) override; // tdms cycle
+    void reset(const unsigned char rst_signal_level = 0) override;
+};
+
+void HDMIController480pTB::tick()
+{
+    //std::cout<<"TMDS: "<<(int)this->p_module->i_tmds_clk<<std::endl;
+    this->pixel_clk_cnt++;
+    this->cpu_clk_cnt++;
+    if (this->pixel_clk_cnt == 10) { // 250 to 25
+        this->pixel_clk_cnt = 0;
+        this->p_module->i_pixel_clk = !this->p_module->i_pixel_clk;
+        //std::cout<<"PIXEL: "<<(int)this->p_module->i_pixel_clk<<std::endl;
+    }
+    if (this->cpu_clk_cnt == 6) { // 250 to ~41
+        this->cpu_clk_cnt = 0;
+        this->p_module->i_cpu_clk = !this->p_module->i_cpu_clk;
+        //std::cout<<"CPU: "<<(int)this->p_module->i_cpu_clk<<std::endl;
+    }
+}
+
+void HDMIController480pTB::cycle(unsigned int times)
+{
+    //std::cout<<"CYCLE NUM: "<<cycle_counter<<std::endl;
+    while (times > 0) {
+        times--;
+        // Make sure the tickcount is greater than zero before
+        // we do this
+        // this->getModuleContext()->timeInc(1);
+        this->cycle_counter++;
+
+        // Allow any combinatorial logic to settle before we tick
+        // the clock.  This becomes necessary in the case where
+        // we may have modified or adjusted the inputs prior to
+        // coming into here, since we need all combinatorial logic
+        // to be settled before we call for a clock tick.
+        //
+        this->p_module->i_tmds_clk = 0;
+        this->p_module->eval();
+
+        //
+        // Here's the new item:
+        //
+        //	Dump values to our trace file
+        //
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter - 2);
+
+        // Repeat for the positive edge of the clock
+        this->tick();
+        this->p_module->i_tmds_clk = 1;
+        this->p_module->eval();
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter);
+
+        // Now the negative edge
+        this->tick();
+        this->p_module->i_tmds_clk = 0;
+        this->p_module->eval();
+        if (this->p_tracer) {
+            // This portion, though, is a touch different.
+            // After dumping our values as they exist on the
+            // negative clock edge ...
+            this->p_tracer->dump(10 * this->cycle_counter + 5);
+            //
+            // We'll also need to make sure we flush any I/O to
+            // the trace file, so that we can use the assert()
+            // function between now and the next tick if we want to.
+            this->p_tracer->flush();
+        }
+    }
+}
+
+void HDMIController480pTB::reset(const unsigned char rst_signal_level)
+{
+    this->pixel_clk_cnt = -1;
+    this->cpu_clk_cnt = -1;
+    this->p_module->i_tmds_clk = 0;
+    this->p_module->i_pixel_clk = 0;
+    this->p_module->i_cpu_clk = 0;
+    char _rst_signal_level = rst_signal_level > 0 ? 1 : 0;
+    this->p_module->i_cpu_rst = _rst_signal_level;
+    // hold 6 tdms clk
+    for (int i = 0; i < 6; i++)
+        this->cycle();
+    this->p_module->i_cpu_rst = !_rst_signal_level;
+    return;
+}
+
+#endif

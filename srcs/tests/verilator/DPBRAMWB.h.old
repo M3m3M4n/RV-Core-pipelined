@@ -1,0 +1,72 @@
+#ifndef DPBRAMWB_H
+#define DPBRAMWB_H
+
+#include "include/testbench.h"
+#include "VDPBRAMWB.h"
+#include "VDPBRAMWB___024root.h"
+
+class DPBRAMWBTB : public TestBench<VDPBRAMWB>
+{
+public:
+    DPBRAMWBTB(VerilatedContext* p_context, long long total_cycle = -1) : 
+        TestBench<VDPBRAMWB> (p_context, total_cycle) {};
+    void cycle(unsigned int times = 1) override;
+    void reset(const unsigned char rst_signal_level = 0) override;
+};
+
+void DPBRAMWBTB::cycle(unsigned int times)
+{
+    while (times > 0) {
+        times--;
+        // Make sure the tickcount is greater than zero before
+        // we do this
+        // this->getModuleContext()->timeInc(1);
+        this->cycle_counter++;
+
+        // Allow any combinatorial logic to settle before we tick
+        // the clock.  This becomes necessary in the case where
+        // we may have modified or adjusted the inputs prior to
+        // coming into here, since we need all combinatorial logic
+        // to be settled before we call for a clock tick.
+        //
+        this->p_module->i_wb_clk = 0;
+        this->p_module->i_p2_clk = 1;
+        this->p_module->eval();
+
+        //
+        // Here's the new item:
+        //
+        //	Dump values to our trace file
+        //
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter - 2);
+
+        // Repeat for the positive edge of the clock
+        this->p_module->i_wb_clk = !this->p_module->i_wb_clk;
+        this->p_module->i_p2_clk = !this->p_module->i_p2_clk;
+        this->p_module->eval();
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter);
+
+        // Now the negative edge
+        this->p_module->i_wb_clk = !this->p_module->i_wb_clk;
+        this->p_module->i_p2_clk = !this->p_module->i_p2_clk;
+        this->p_module->eval();
+        if (this->p_tracer) {
+            // This portion, though, is a touch different.
+            // After dumping our values as they exist on the
+            // negative clock edge ...
+            this->p_tracer->dump(10 * this->cycle_counter + 5);
+            //
+            // We'll also need to make sure we flush any I/O to
+            // the trace file, so that we can use the assert()
+            // function between now and the next tick if we want to.
+            this->p_tracer->flush();
+        }
+    }
+}
+
+void DPBRAMWBTB::reset(const unsigned char rst_signal_level)
+{
+    return; // no rst
+}
+
+#endif

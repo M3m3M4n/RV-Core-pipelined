@@ -1,0 +1,272 @@
+// Interface to verilator generated CPP code
+
+#include "HDMIController480p.h"
+
+#include <cstdlib>
+#include <csignal>
+#include <string>
+
+HDMIController480pTB* p_tb = nullptr;
+VHDMIController480p* p_VHDMIController480p = nullptr;
+VerilatedContext* p_context = nullptr;
+
+void cleanup()
+{
+	if (p_tb){
+		delete p_tb;
+		p_tb = nullptr;
+	}
+	if (p_VHDMIController480p) {
+		p_VHDMIController480p = nullptr;
+	}
+	if (p_context) {
+		delete p_context;
+		p_context = nullptr;
+	}
+}
+
+void cleanup_exit()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
+}
+
+void sigint_handler(int num)
+{
+	DEBUG("SIGINT caught, exiting...");
+	cleanup_exit();
+}
+
+void install_signal_handlers()
+{
+	// SIGINT
+	struct sigaction sa;
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	// Restart functions if interrupted by handler
+	// (might just call signal() instead)
+	sa.sa_flags = SA_RESTART; 
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		DEBUG("SIGACTION failed!");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void cpu_cycle(){
+	 // hold 6 tdms clk
+    for (int i = 0; i < 6; i++) {
+		p_context->timeInc(1);
+		p_tb->cycle();
+	}
+}
+
+int main(int argc, char **argv)
+{
+	install_signal_handlers();
+	p_context = new VerilatedContext();
+	p_context->commandArgs(argc, argv);
+	p_tb = new HDMIController480pTB(p_context, 5000000);
+	if (!p_tb) {
+		DEBUG("Object creation failed!");
+		exit(EXIT_FAILURE);
+	}
+	p_VHDMIController480p = p_tb->getModulePointer();
+	if (!p_tb) {
+		DEBUG("Cannot get top module pointer!");
+		exit(EXIT_FAILURE);
+	}
+	p_context->traceEverOn(true);
+	p_tb->traceOn("HDMIController480p.vcd");
+	p_tb->reset();
+
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    // WRITE WB
+    p_VHDMIController480p->i_cyc = 1;
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_data = 0xabad1dea;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 1;
+    p_VHDMIController480p->i_addr = 0x30000000;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    p_VHDMIController480p->i_we  = 0;
+	cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_data = 0xabad1dea;
+    p_VHDMIController480p->i_sel = 0b0011;
+    p_VHDMIController480p->i_we  = 1;
+    p_VHDMIController480p->i_addr = 0x30000004;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    p_VHDMIController480p->i_we  = 0;
+	cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_data = 0xabad1dea;
+    p_VHDMIController480p->i_sel = 0b0001;
+    p_VHDMIController480p->i_we  = 1;
+    p_VHDMIController480p->i_addr = 0x30000008;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    p_VHDMIController480p->i_we  = 0;
+	cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+
+    // READ 1 WB
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000000;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b0011;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000000;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b0001;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000000;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+	cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    // READ 2 WB
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000004;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b0011;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000004;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+	cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b0001;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000004;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    // READ 3 WB
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000008;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b0011;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000008;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b0001;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30000008;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    // READ 4 WB controls
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30009600;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30009604;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30009604;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_stb = 1;
+    p_VHDMIController480p->i_sel = 0b1111;
+    p_VHDMIController480p->i_we  = 0;
+    p_VHDMIController480p->i_addr = 0x30009604;
+    cpu_cycle();
+    p_VHDMIController480p->i_stb = 0;
+    cpu_cycle();
+	cpu_cycle();
+    cpu_cycle();
+
+    p_VHDMIController480p->i_cyc = 0;
+    p_VHDMIController480p->i_stb = 0;
+	//cleanup_exit();
+
+    while(!p_tb->isDone()) {
+		cpu_cycle();
+	} 
+
+    cleanup_exit();
+}

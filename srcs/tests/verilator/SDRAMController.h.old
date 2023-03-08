@@ -1,0 +1,65 @@
+#ifndef SDRAMController_H
+#define SDRAMController_H
+
+#include "include/testbench.h"
+#include "VSDRAMController.h"
+#include "VSDRAMController___024root.h"
+
+#include "include/models/SDRAM.h"
+
+class SDRAMControllerTB : public TestBench<VSDRAMController>
+{
+public:
+    SDRAM *sdram_model;
+    void cycle(unsigned int times) override;
+    void reset(const unsigned char rst_signal_level = 0) override;
+    void cycle(void); // overload, don't call the parents
+    SDRAMControllerTB(VerilatedContext* p_context, long long total_cycle = -1);
+    ~SDRAMControllerTB();
+};
+
+SDRAMControllerTB::SDRAMControllerTB(VerilatedContext* p_context, long long total_cycle) : 
+TestBench(p_context, total_cycle)
+{
+    this->sdram_model = new SDRAM();
+}
+
+SDRAMControllerTB::~SDRAMControllerTB()
+{
+    delete this->sdram_model;
+}
+
+void SDRAMControllerTB::reset(const unsigned char rst_signal_level)
+{
+    // NOTE: If signal dump ever get truncated, watch the signal type (unsigned int) and value (0 | 1 only)
+    char _rst_signal_level = rst_signal_level > 0 ? 1 : 0;
+    this->p_module->i_rst = _rst_signal_level;
+    this->cycle();
+    this->p_module->i_rst = !_rst_signal_level;
+}
+
+void SDRAMControllerTB::cycle(unsigned int times)
+{
+    for(int i = 0 ; i < times; i++) {
+        this->cycle();
+    }
+}
+
+void SDRAMControllerTB::cycle()
+{
+    // Controller cycle first...
+    TestBench::cycle(1);
+    // ...then sdram
+    sdram_model->cycle (
+        this->p_module->i_clk, 1, 0, 
+        this->p_module->o_r_ras,
+        this->p_module->o_r_cas,
+        this->p_module->o_r_we,
+		this->p_module->o_r_ba,
+        this->p_module->o_r_addr,
+        this->p_module->o_r_dq, // in -> out vice versa
+        this->p_module->i_r_dq
+    );
+}
+
+#endif

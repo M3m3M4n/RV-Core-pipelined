@@ -1,0 +1,346 @@
+#include "SDRAM.h"
+
+SDRAM::SDRAM(void)
+{
+    // Allocate memory
+    p_v_backing_mem = new uint8_t [O_SIZE_BYTE]();
+    // State machine init
+    v_state = INIT_STARTUP_DELAY;
+    // Flags
+    v_init_done = 0;
+    v_init_refreshed = 0;
+    v_init_MRSed = 0;
+    // Timer
+    v_wait_timer = C_INIT_WAIT;
+    v_refresh_timer = C_MAX_REF_INTERVAL;
+    // Mode regs
+    v_cas_latency = C_CAS_LATENCY;
+    v_burst_length = O_BURST_LENGTH;
+    v_read_wait = C_READ_WAIT;
+    v_write_wait = C_WRITE_WAIT;
+}
+
+SDRAM::~SDRAM(void)
+{
+    delete p_v_backing_mem;
+}
+
+void SDRAM::mem_assign(SelectTypeWidth<O_SIZE_BIT_WIDTH>::type idx,
+                        uint8_t *data, size_t size)
+{
+    // size check
+    assert((idx + size) <= O_SIZE_BYTE);
+    memcpy(&p_v_backing_mem[idx], data, size);
+}
+
+void SDRAM::mem_block_assign(SelectTypeWidth<O_BLOCK_BIT_WIDTH>::type block_addr,
+                                uint8_t *data, size_t size_byte)
+{
+    // Check data size (byte, must align to block size)
+    DEBUG("SDRAM BLOCK ASSIGN: Writing block #%d with \"%s\", size %ld bytes",
+        block_addr, (char *)data, size_byte);
+    assert((size_byte % O_DATA_BLOCK_SIZE) == 0);
+    mem_assign(block_addr * O_DATA_BLOCK_SIZE, data, size_byte);
+}
+
+// Mode register set
+// BA0-1: Reserved
+// A10: Reserved
+// A9: Write burst length 0: burst, 1: single bit
+// A8-7: Test mode : 00: normal
+// A6-4: CAS latency: 010: 2, 011: 3
+// A3: BT: 0: sequential, 1: interleave
+// A2-0: Burst length: 32bits multiple
+//       000: 1
+//       001: 2
+//       010: 4
+//       011: 8
+//       111: Full Page (Sequential)
+void SDRAM::mode_register_set(
+    SelectTypeWidth<O_BANK_BIT_WIDTH>::type ba,
+    SelectTypeWidth<O_ADDR_BIT_WIDTH>::type addr
+){
+    v_cas_latency = (addr & 0x70) >> 4;
+    v_burst_length = (addr & 0x3);
+    v_read_wait = v_cas_latency + v_burst_length;
+    v_write_wait = ceil((T_WR + T_RP) / T_CLK_PERIOD) + v_burst_length;
+    DEBUG("SDRAM MODE REGISTER SET:"
+            "\n\tValue: 0x%08X"
+            "\n\tCas latency : %d"
+            "\n\tBurst length: %d",
+            addr, v_cas_latency, v_burst_length
+        );
+}
+
+// Call every tick, after main verilator eval
+void SDRAM::cycle (
+        uint8_t cke, uint8_t cs_n, uint8_t ras_n, uint8_t cas_n, uint8_t we_n,
+		SelectTypeWidth<O_BANK_BIT_WIDTH>::type ba,
+        SelectTypeWidth<O_ADDR_BIT_WIDTH>::type addr,
+        SelectTypeWidth<O_DATA_BIT_WIDTH>::type data_in,
+        SelectTypeWidth<O_DATA_BIT_WIDTH>::type &data_out // reference
+        // SelectInteger<O_DQM_BIT_WIDTH>::type dqm,
+        // SelectInteger<O_DATA_BIT_WIDTH>::type dq
+) {
+    assert(cke);
+    if (v_wait_timer > 0) v_wait_timer--;
+    // Not getting refreshed
+    assert(v_refresh_timer > 0);
+    if (v_init_done) v_refresh_timer--;
+    if (!cs_n) {
+        switch (v_state) {
+            case INIT_STARTUP_DELAY: {
+                if (!v_wait_timer && ((!ras_n) && (cas_n) && (!we_n) && (addr & 0x400))) { // Precharge all
+                    v_state = INIT_PRECHARGE;
+                    v_wait_timer = C_PRECHARGE_WAIT;
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            case INIT_PRECHARGE: {
+                if (!v_wait_timer) {
+                    // Either refresh or mode register set
+                    if ((!ras_n) && (!cas_n) && (we_n)) { // Auto refresh
+                        v_state = INIT_REFRESH1;
+                        v_wait_timer = C_REFRESH_WAIT;
+                    }
+                    else if ((!ras_n) && (!cas_n) && (!we_n)) { // MRS
+                        mode_register_set(ba, addr);
+                        v_state = INIT_MRS;
+                        v_wait_timer = C_LOAD_MODE_WAIT;
+                    }
+                    else {
+                       assert((ras_n) && (cas_n) && (we_n)); // NOP
+                    }
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            case INIT_REFRESH1: {
+                if (!v_wait_timer && ((!ras_n) && (!cas_n) && (we_n))) {
+                    v_state = INIT_REFRESH2;
+                    v_wait_timer = C_REFRESH_WAIT;
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            case INIT_REFRESH2: {
+                if (!v_wait_timer) {
+                    v_init_refreshed = 1;
+                    if (v_init_MRSed) {
+                        // Change to new work state
+                        v_state = WORK_IDLE;
+                        v_refresh_timer = C_MAX_REF_INTERVAL; // set in constructor
+                        v_init_done = 1;
+                        DEBUG("SDRAM STARTUP COMPLETE!");
+                    }
+                    else if ((!ras_n) && (!cas_n) && (!we_n)) { //MRS
+                        mode_register_set(ba, addr);
+                        v_state = INIT_MRS;
+                        v_wait_timer = C_LOAD_MODE_WAIT;
+                    }
+                    else {
+                        assert((ras_n) && (cas_n) && (we_n)); // NOP
+                    }
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            case INIT_MRS: {
+                if (!v_wait_timer) {
+                    v_init_MRSed = 1;
+                    if (v_init_refreshed) {
+                        // Change to new work state
+                        v_state = WORK_IDLE;
+                        v_refresh_timer = C_MAX_REF_INTERVAL; // set in constructor
+                        v_init_done = 1;
+                        DEBUG("SDRAM STARTUP COMPLETE!");
+                    }
+                    else if ((!ras_n) && (!cas_n) && (we_n)) { // Auto refresh
+                        v_state = INIT_REFRESH1;
+                        v_wait_timer = C_REFRESH_WAIT;
+                    }
+                    else {
+                        assert((ras_n) && (cas_n) && (we_n)); // NOP
+                    }
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            // Should this ever support interleaving, working state should monitor each bank's state individualy
+            // and evaluate upon receiving commands
+            // For the purpose of testing my simple controller, forcing it to comply to a state machine model
+            // should be enough
+            case WORK_IDLE: {
+                // Available commands in this state only, else use nops
+                if ((!ras_n) && (!cas_n) && (we_n)) { // Receive AutoRefresh
+                    v_state = WORK_REFRESH;
+                    v_wait_timer = C_REFRESH_WAIT;
+                    v_refresh_timer = C_MAX_REF_INTERVAL;
+                    DEBUG("SDRAM STATE CHANGE: IDLE to REFRESH");
+                }
+                else if ((!ras_n) && (cas_n) && (we_n)) { // BankActive
+                    v_state = WORK_ACTIVE;
+                    v_wait_timer = C_ACTIVE_WAIT;
+                    v_row_addr = addr; // save row addr
+                    v_bank_addr_active = ba; // save bank addr
+                    DEBUG("SDRAM STATE CHANGE: IDLE to ACTIVE");
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            case WORK_ACTIVE: {
+                if (v_wait_timer == 0) { // Should wait for READ or WRITE
+                    // save anyway
+                    SelectTypeWidth<O_ADDR_BIT_WIDTH>::type tmp = 0;
+                    for (int i = 0; i < O_COLUMN_BIT_WIDTH; i++) {
+                        tmp += (1 << i);
+                    }
+                    v_col_addr = addr & tmp; // save column addr 
+                    v_bank_addr_rw = ba; // save bank addr
+                    // validate
+                    assert(v_bank_addr_active == v_bank_addr_rw);
+                    // Full address check = [bank][row][column]
+                    // This addr is block addr
+                    v_full_addr = (v_bank_addr_rw << (O_ROW_BIT_WIDTH + O_COLUMN_BIT_WIDTH)) +
+                                (v_row_addr << (O_COLUMN_BIT_WIDTH)) + v_col_addr;
+                    // Size check
+                    assert((v_full_addr + v_burst_length) < O_NBLOCK);
+                    if ((ras_n) && (!cas_n) && (we_n)) { // READ
+                        assert(addr & 0x400); // a10 == high, precharge
+                        v_state = WORK_READ;
+                        v_wait_timer = v_read_wait;
+                        DEBUG("SDRAM STATE CHANGE: ACTIVE to READ");
+                    }
+                    else if ((ras_n) && (!cas_n) && (!we_n)) { // WRITE
+                        assert(addr & 0x400); // a10 == high, precharge
+                        v_state = WORK_WRITE;
+                        v_wait_timer = v_write_wait;
+                        // first block
+                        DEBUG("SDRAM WRITE: Writing block #%d with \"%s\", size %ld bytes",
+                            v_full_addr, (char*)&data_in, sizeof(data_in));
+                        ((SelectTypeWidth<O_DATA_BIT_WIDTH>::type *)p_v_backing_mem)[v_full_addr] = data_in;
+                        DEBUG("SDRAM STATE CHANGE: ACTIVE to WRITE");
+                    }
+                    else {
+                        assert((ras_n) && (cas_n) && (we_n)); // NOP
+                    }
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            // Allow only read / write burst with auto precharge, cannot be interrupted by read / write or precharge before the end of the burst
+            // Burst stop cmd unavailable
+            // Full page burst unavailable
+            case WORK_READ: {
+                // If (statisfy cas latency)
+                // Data has to be available 1 cycle early, because this trigger after main eval -> need 2 trigger 1 cycle before data available flag
+                if ((v_wait_timer <= (v_burst_length + 1)) && (v_wait_timer > 1)) {
+                    // Return data
+                    data_out = ((SelectTypeWidth<O_DATA_BIT_WIDTH>::type *)p_v_backing_mem)[v_full_addr + (v_burst_length + 1 - v_wait_timer)];
+                    DEBUG("SDRAM READ: Reading block #%d results \"%s\", size %ld bytes",
+                        v_full_addr + (v_burst_length + 1 - v_wait_timer), (char*)&data_out, sizeof(data_out));
+                }
+                if (v_wait_timer == 0) {
+                    // ...then we can allow another command
+                    if ((!ras_n) && (cas_n) && (we_n)) { // BankActive
+                        v_state = WORK_ACTIVE;
+                        v_wait_timer = C_ACTIVE_WAIT;
+                        v_row_addr = addr; // save row addr
+                        v_bank_addr_active = ba; // save bank addr
+                        DEBUG("SDRAM STATE CHANGE: READ to ACTIVE");
+                    }
+                    else if ((!ras_n) && (!cas_n) && (we_n)) { // AutoRefresh
+                        v_state = WORK_REFRESH;
+                        v_wait_timer = C_REFRESH_WAIT;
+                        v_refresh_timer = C_MAX_REF_INTERVAL;
+                        DEBUG("SDRAM STATE CHANGE: READ to REFRESH");
+                    }
+                    else {
+                        // idle
+                        assert((ras_n) && (cas_n) && (we_n)); // NOP
+                        v_state = WORK_IDLE;
+                        DEBUG("SDRAM STATE CHANGE: READ to IDLE");
+                    }
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            case WORK_WRITE: {
+                // Write data, from block index addr + 1
+                if (v_wait_timer > (v_write_wait - v_burst_length)) { // not >= because already writen 1 block
+                    DEBUG("SDRAM WRITE: Writing block #%d with \"%s\", size %ld bytes",
+                        v_full_addr + (v_write_wait - v_wait_timer), (char*)&data_in, sizeof(data_in));
+                    ((SelectTypeWidth<O_DATA_BIT_WIDTH>::type *)p_v_backing_mem)[v_full_addr + (v_write_wait - v_wait_timer)] = data_in;
+                }
+                if (v_wait_timer == 0) {
+                    // ...then we can allow another command
+                    if ((!ras_n) && (cas_n) && (we_n)) { // BankActive
+                        v_state = WORK_ACTIVE;
+                        v_wait_timer = C_ACTIVE_WAIT;
+                        v_row_addr = addr; // save row addr
+                        v_bank_addr_active = ba; // save bank addr
+                        DEBUG("SDRAM STATE CHANGE: WRITE to ACTIVE");
+                    }
+                    else if ((!ras_n) && (!cas_n) && (we_n)) { // AutoRefresh
+                        v_state = WORK_REFRESH;
+                        v_wait_timer = C_REFRESH_WAIT;
+                        v_refresh_timer = C_MAX_REF_INTERVAL;
+                        DEBUG("SDRAM STATE CHANGE: WRITE to REFRESH");
+                    }
+                    else {
+                        // idle
+                        assert((ras_n) && (cas_n) && (we_n)); // NOP
+                        v_state = WORK_IDLE;
+                        DEBUG("SDRAM STATE CHANGE: WRITE to IDLE");
+                    }
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            case WORK_REFRESH: {
+                if (v_wait_timer == 0) {
+                    // if receive active / idle
+                    if ((!ras_n) && (cas_n) && (we_n)) { // BankActive
+                        v_state = WORK_ACTIVE;
+                        v_wait_timer = C_ACTIVE_WAIT;
+                        v_row_addr = addr; // save row addr
+                        v_bank_addr_active = ba; // save bank addr
+                        DEBUG("SDRAM STATE CHANGE: REFRESH to ACTIVE");
+                    }
+                    else {
+                        // idle
+                        assert((ras_n) && (cas_n) && (we_n)); // NOP
+                        v_state = WORK_IDLE;
+                        DEBUG("SDRAM STATE CHANGE: REFRESH to IDLE");
+                    }
+                }
+                else {
+                    assert((ras_n) && (cas_n) && (we_n)); // NOP
+                }
+                break;
+            }
+            default: {
+                abort();
+            }
+        }
+    }
+}

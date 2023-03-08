@@ -1,0 +1,82 @@
+// Interface to verilator generated CPP code
+#include "include/testbench.h"
+#include "VVarClkDivider.h"
+#include "VVarClkDivider___024root.h"
+
+#include <cstdlib>
+#include <csignal>
+#include <string>
+
+TestBench<VVarClkDivider>* p_tb = nullptr;
+VVarClkDivider* p_VVarClkDivider = nullptr;
+VerilatedContext* p_context = nullptr;
+
+void cleanup()
+{
+	if (p_tb){
+		delete p_tb;
+		p_tb = nullptr;
+	}
+	if (p_VVarClkDivider) {
+		p_VVarClkDivider = nullptr;
+	}
+	if (p_context) {
+		delete p_context;
+		p_context = nullptr;
+	}
+}
+
+void cleanup_exit()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
+}
+
+void sigint_handler(int num)
+{
+	DEBUG("SIGINT caught, exiting...");
+	cleanup_exit();
+}
+
+void install_signal_handlers()
+{
+	// SIGINT
+	struct sigaction sa;
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	// Restart functions if interrupted by handler
+	// (might just call signal() instead)
+	sa.sa_flags = SA_RESTART; 
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		DEBUG("SIGACTION failed!");
+		exit(EXIT_FAILURE);
+	}
+}
+
+int main(int argc, char **argv)
+{
+	install_signal_handlers();
+	p_context = new VerilatedContext();
+	p_context->commandArgs(argc, argv);
+	p_tb = new TestBench<VVarClkDivider>(p_context, 100);
+	if (!p_tb) {
+		DEBUG("Object creation failed!");
+		exit(EXIT_FAILURE);
+	}
+	p_VVarClkDivider = p_tb->getModulePointer();
+	if (!p_tb) {
+		DEBUG("Cannot get top module pointer!");
+		exit(EXIT_FAILURE);
+	}
+	p_context->traceEverOn(true);
+	p_tb->traceOn("VarClkDivider.vcd");
+	p_tb->reset();
+
+	while(!p_tb->isDone()) {
+		// Increase time seperately from cycle counter for now, incase multiple module use the same context
+		p_context->timeInc(1);
+		p_tb->cycle();
+	} 
+
+	cleanup_exit();
+}

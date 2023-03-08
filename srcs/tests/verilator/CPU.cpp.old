@@ -1,0 +1,141 @@
+// Interface to verilator generated CPP code
+#include "include/testbench.h"
+#include "VCPU.h"
+#include "VCPU__Dpi.h"
+#include "VCPU___024root.h"
+
+#include "CPU.h"
+
+// Available by tagging signals with /* verilator public */
+#include "VCPU_CPU.h"
+#include "VCPU_DataPipeline.h"
+
+#include <cstdlib>
+#include <csignal>
+#include <string>
+
+CPUTB* p_tb = nullptr;
+VCPU* p_VCPU = nullptr;
+VerilatedContext* p_context = nullptr;
+
+// Export to DPI-C
+const char* fetchenv(const char* env_var)
+{
+	const char* data = getenv(env_var);
+	if (!data) {
+		DEBUG("Could not fetch env %s, exiting!", env_var);
+		exit(EXIT_FAILURE);
+	}
+	return data;
+}
+
+void cleanup()
+{
+	if (p_tb){
+		delete p_tb;
+		p_tb = nullptr;
+	}
+	if (p_VCPU) {
+		p_VCPU = nullptr;
+	}
+	if (p_context) {
+		delete p_context;
+		p_context = nullptr;
+	}
+}
+
+void cleanup_exit()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
+}
+
+void sigint_handler(int num)
+{
+	DEBUG("SIGINT caught, exiting...");
+	cleanup_exit();
+}
+
+void install_signal_handlers()
+{
+	// SIGINT
+	struct sigaction sa;
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	// Restart functions if interrupted by handler
+	// (might just call signal() instead)
+	sa.sa_flags = SA_RESTART; 
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		DEBUG("SIGACTION failed!");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void cycle_til_instr(const unsigned int& curr, unsigned int target)
+{
+	std::cout << "[+] Reached instr: " << std::showbase << std::hex << curr << " @ " << std::dec <<  p_context->time() << std::endl;
+	while(target != curr) {
+		p_context->timeInc(1);
+		p_tb->cycle();
+		if (curr != 0)
+			std::cout << "[+] Reached instr: " << std::showbase << std::hex << curr << " @ " << std::dec << p_context->time() << std::endl;
+	}
+}
+
+void gpio_tests()
+{
+	p_VCPU->i_gpio = 0x69696969;
+	cycle_til_instr(p_VCPU->rootp->CPU->dataPipeline->e_pc, 0x30);
+	p_context->timeInc(1);
+	p_tb->cycle();
+	p_VCPU->i_gpio = 0xabad1dea;
+	cycle_til_instr(p_VCPU->rootp->CPU->dataPipeline->e_pc, 0x30);
+	p_context->timeInc(1);
+	p_tb->cycle();
+	p_VCPU->i_gpio = 0xcafebabe;
+	cycle_til_instr(p_VCPU->rootp->CPU->dataPipeline->e_pc, 0x30);
+}
+
+int main(int argc, char **argv)
+{
+	install_signal_handlers();
+	p_context = new VerilatedContext();
+	p_context->commandArgs(argc, argv);
+	p_tb = new CPUTB(p_context); //, 5000000);
+	if (!p_tb) {
+		DEBUG("Object creation failed!");
+		exit(EXIT_FAILURE);
+	}
+	p_VCPU = p_tb->getModulePointer();
+	if (!p_tb) {
+		DEBUG("Cannot get top module pointer!");
+		exit(EXIT_FAILURE);
+	}
+	p_context->traceEverOn(true);
+	p_tb->traceOn("CPU.vcd");
+	p_context->timeInc(1); // reset also cycle
+	p_tb->reset();
+
+	// Run
+	while(!p_tb->isDone()) {
+		// Increase time seperately from cycle counter for now, incase multiple module use the same context
+		p_context->timeInc(1);
+		p_tb->cycle();
+	}
+
+	// For instr_test
+	cycle_til_instr(p_VCPU->rootp->CPU->dataPipeline->e_pc, 0x12c);
+
+	// For GPIO_test
+	// gpio_tests();
+
+	// Few more cycle for kicks
+	p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+	p_context->timeInc(1);
+	p_tb->cycle();
+
+	cleanup_exit();
+}

@@ -1,0 +1,104 @@
+#ifndef CPU_H
+#define CPU_H
+
+// Interface to verilator generated CPP code
+#include "include/testbench.h"
+#include "VCPU.h"
+
+class CPUTB : public TestBench<VCPU>
+{
+    unsigned int div10_clk_cnt;
+    unsigned int div4_clk_cnt;
+    void slowClkTick();
+public:
+    CPUTB(VerilatedContext* p_context, long long total_cycle = -1) : 
+        div10_clk_cnt(-1),
+        div4_clk_cnt(-1),
+        TestBench<VCPU> (p_context, total_cycle) {};
+    void cycle(unsigned int times = 1) override; // tdms cycle
+    void reset(const unsigned char rst_signal_level = 0) override;
+};
+
+void CPUTB::slowClkTick()
+{
+    // Crude clock divider as PLL for verilator is not implemented
+    // All clocks divide from the fastest clock
+    // This is called every time the fast clock change state
+    this->div10_clk_cnt++;
+    this->div4_clk_cnt++;
+    if (this->div10_clk_cnt == 10) { // 10 times slower
+        this->div10_clk_cnt = 0;
+        this->p_module->i_aux_clk_0 = !this->p_module->i_aux_clk_0;
+    }
+    if (this->div4_clk_cnt == 4) { // 4 times slower
+        this->div4_clk_cnt = 0;
+        this->p_module->i_clk = !this->p_module->i_clk;
+    }
+}
+
+void CPUTB::cycle(unsigned int times)
+{
+    while (times > 0) {
+        times--;
+        // Make sure the tickcount is greater than zero before
+        // we do this
+        // this->getModuleContext()->timeInc(1);
+        this->cycle_counter++;
+
+        // Allow any combinatorial logic to settle before we tick
+        // the clock.  This becomes necessary in the case where
+        // we may have modified or adjusted the inputs prior to
+        // coming into here, since we need all combinatorial logic
+        // to be settled before we call for a clock tick.
+        //
+        this->p_module->i_aux_clk_1 = 0; // (1): this is on the same clock as (2), technically you don't need to set here
+        this->p_module->eval();
+
+        //
+        // Here's the new item:
+        //
+        //	Dump values to our trace file
+        //
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter - 2);
+
+        // Repeat for the positive edge of the clock
+        this->slowClkTick();
+        this->p_module->i_aux_clk_1 = 1;
+        this->p_module->eval();
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter);
+
+        // Now the negative edge
+        this->slowClkTick();
+        this->p_module->i_aux_clk_1 = 0; // (2): this is on the same clock as (1)
+        this->p_module->eval();
+        if (this->p_tracer) {
+            // This portion, though, is a touch different.
+            // After dumping our values as they exist on the
+            // negative clock edge ...
+            this->p_tracer->dump(10 * this->cycle_counter + 5);
+            //
+            // We'll also need to make sure we flush any I/O to
+            // the trace file, so that we can use the assert()
+            // function between now and the next tick if we want to.
+            this->p_tracer->flush();
+        }
+    }
+}
+
+void CPUTB::reset(const unsigned char rst_signal_level)
+{
+    this->div10_clk_cnt = -1;
+    this->div4_clk_cnt = -1;
+    this->p_module->i_aux_clk_0 = 0;
+    this->p_module->i_aux_clk_1 = 0;
+    this->p_module->i_clk = 0;
+    char _rst_signal_level = rst_signal_level > 0 ? 1 : 0;
+    this->p_module->i_rst = _rst_signal_level;
+    // hold 6 fast clk
+    for (int i = 0; i < 6; i++)
+        this->cycle();
+    this->p_module->i_rst = !_rst_signal_level;
+    return;
+}
+
+#endif

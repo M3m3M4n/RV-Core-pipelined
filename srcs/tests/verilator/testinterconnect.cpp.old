@@ -1,0 +1,151 @@
+// Interface to verilator generated CPP code
+#include "include/testbench.h"
+#include "Vtestinterconnect.h"
+#include "Vtestinterconnect__Dpi.h"
+#include "Vtestinterconnect___024root.h"
+
+#include <cstdlib>
+#include <csignal>
+#include <string>
+
+TestBench<Vtestinterconnect>* p_tb = nullptr;
+Vtestinterconnect* p_Vtestinterconnect = nullptr;
+VerilatedContext* p_context = nullptr;
+
+void cleanup()
+{
+	if (p_tb){
+		delete p_tb;
+		p_tb = nullptr;
+	}
+	if (p_Vtestinterconnect) {
+		p_Vtestinterconnect = nullptr;
+	}
+	if (p_context) {
+		delete p_context;
+		p_context = nullptr;
+	}
+}
+
+void cleanup_exit()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
+}
+
+void sigint_handler(int num)
+{
+	DEBUG("SIGINT caught, exiting...");
+	cleanup_exit();
+}
+
+void install_signal_handlers()
+{
+	// SIGINT
+	struct sigaction sa;
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	// Restart functions if interrupted by handler
+	// (might just call signal() instead)
+	sa.sa_flags = SA_RESTART; 
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		DEBUG("SIGACTION failed!");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void signal_dumps()
+{
+
+}
+
+void cycle_til_high(const unsigned char& sig)
+{
+	do {
+		p_tb->cycle();
+	}
+	while(sig == 0);
+}
+
+int main(int argc, char **argv)
+{
+	install_signal_handlers();
+	p_context = new VerilatedContext();
+	p_context->commandArgs(argc, argv);
+	p_tb = new TestBench<Vtestinterconnect>(p_context, 10000);
+	if (!p_tb) {
+		DEBUG("Object creation failed!");
+		exit(EXIT_FAILURE);
+	}
+	p_Vtestinterconnect = p_tb->getModulePointer();
+	if (!p_tb) {
+		DEBUG("Cannot get top module pointer!");
+		exit(EXIT_FAILURE);
+	}
+	p_context->traceEverOn(true);
+	p_tb->traceOn("test.vcd");
+	p_tb->reset();
+	// Accessing inner signal use rootp
+	// p_Vtestinterconnect->rootp->
+	// Setup master a for writing to slave a
+	p_Vtestinterconnect->i_a_mem_en = 1;
+	p_Vtestinterconnect->i_a_mem_we = 1;
+	p_Vtestinterconnect->i_a_mem_addr = 0x20000000;
+	p_Vtestinterconnect->i_a_mem_wd = 0xabad1dea;
+	// write
+	p_Vtestinterconnect->i_a_mask_type = 0b10; // full dword
+	cycle_til_high(p_Vtestinterconnect->o_a_mem_ack);
+	p_Vtestinterconnect->i_a_mem_addr = 0x20000004;
+	p_Vtestinterconnect->i_a_mask_type = 0b01; // short
+	cycle_til_high(p_Vtestinterconnect->o_a_mem_ack);
+	p_Vtestinterconnect->i_a_mem_addr = 0x20000008;
+	p_Vtestinterconnect->i_a_mask_type = 0b00; // byte
+	cycle_til_high(p_Vtestinterconnect->o_a_mem_ack);
+	// read
+	p_Vtestinterconnect->i_a_mem_we = 0;
+	p_Vtestinterconnect->i_a_mem_addr = 0x20000000;
+	p_Vtestinterconnect->i_a_mask_type = 0b10;
+	p_Vtestinterconnect->i_a_mem_wd = 0x0;
+	cycle_til_high(p_Vtestinterconnect->o_a_mem_ack);
+	p_Vtestinterconnect->i_a_mem_addr = 0x20000004;
+	p_Vtestinterconnect->i_a_mask_type = 0b01; // short
+	cycle_til_high(p_Vtestinterconnect->o_a_mem_ack);
+	p_Vtestinterconnect->i_a_mem_addr = 0x20000008;
+	p_Vtestinterconnect->i_a_mask_type = 0b00; // byte
+	cycle_til_high(p_Vtestinterconnect->o_a_mem_ack);
+	// master b write
+	p_Vtestinterconnect->i_a_mem_en = 0; // disable a
+	p_Vtestinterconnect->i_b_mem_en = 1;
+	p_Vtestinterconnect->i_b_mem_we = 1;
+	p_Vtestinterconnect->i_b_mem_addr = 0x30000000;
+	p_Vtestinterconnect->i_b_mem_wd = 0xcafebabe;
+	p_Vtestinterconnect->i_b_mask_type = 0b10;
+	cycle_til_high(p_Vtestinterconnect->o_b_mem_ack);
+	p_Vtestinterconnect->i_b_mem_addr = 0x30000004;
+	p_Vtestinterconnect->i_b_mask_type = 0b01; // short
+	cycle_til_high(p_Vtestinterconnect->o_b_mem_ack);
+	p_Vtestinterconnect->i_b_mem_addr = 0x30000008;
+	p_Vtestinterconnect->i_b_mask_type = 0b00; // byte
+	cycle_til_high(p_Vtestinterconnect->o_b_mem_ack);
+	// b read
+	p_Vtestinterconnect->i_a_mem_en = 1; // en a to test
+	p_Vtestinterconnect->i_b_mem_we = 0;
+	p_Vtestinterconnect->i_b_mem_addr = 0x30000000;
+	p_Vtestinterconnect->i_b_mask_type = 0b10;
+	p_Vtestinterconnect->i_b_mem_wd = 0x0;
+	cycle_til_high(p_Vtestinterconnect->o_b_mem_ack);
+	p_Vtestinterconnect->i_b_mem_addr = 0x30000004;
+	p_Vtestinterconnect->i_b_mask_type = 0b01; // short
+	cycle_til_high(p_Vtestinterconnect->o_b_mem_ack);
+	p_Vtestinterconnect->i_b_mem_addr = 0x30000008;
+	p_Vtestinterconnect->i_b_mask_type = 0b00; // byte
+	cycle_til_high(p_Vtestinterconnect->o_b_mem_ack);
+	p_Vtestinterconnect->i_a_mem_en = 0;
+	p_Vtestinterconnect->i_b_mem_en = 0;
+	// p_Vtestinterconnect->rootp->testinterconnect->arbiter->_a_owned
+	// Loop
+	// while(!p_tb->isDone()) {
+	// 	p_tb->cycle();
+	// }
+	cleanup_exit();
+}

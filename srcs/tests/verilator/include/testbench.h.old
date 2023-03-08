@@ -1,0 +1,213 @@
+#ifndef TESTBENCH_H
+#define TESTBENCH_H
+
+#include <memory>
+#include <verilated.h>
+#include <verilated_vcd_c.h>
+
+#include "debug.h"
+
+// Verilator access submodule signal
+// https://www.embecosm.com/appnotes/ean6/html/ch06s02.html
+
+// Interface for MODULE must have i_clk and i_rst
+template<class MODULE>
+class TestBench {
+protected:
+	unsigned long cycle_counter;
+	unsigned long total_cycle;
+	bool endless;
+	MODULE* p_module;
+	VerilatedVcdC* p_tracer;
+
+public:
+	TestBench(VerilatedContext* p_context, long long total_cycle = -1);
+	~TestBench(void);
+
+    // Context
+    VerilatedContext* getModuleContext(void);
+	// Return number of cycle ran cycle_counter
+	unsigned long getCycleCounter(void);
+	// Return pointer to verilator UUT
+	MODULE* getModulePointer(void);
+
+	// Reset the UUT
+	virtual void reset(const unsigned char rst_signal_level = 0);
+	// Flip UUT clock
+	virtual void cycle(unsigned int times = 1);
+	// Enable tracing
+    // traceEverOn must be called by context first
+	void traceOn(const char* vcdfile);
+	// Disable tracing
+    // Not sure if safe to delete VerilatedVcdC, but destructor exist :/
+	void traceOff(void);
+	// True if cycle_counter >= total_cycle or encounter $finish
+	bool isDone(void);
+};
+
+// g++ template function not in object file
+// https://stackoverflow.com/questions/64544744/g-skipping-a-function-when-compiling-to-object-file
+// Just keep implementation here for now
+
+template <class MODULE>
+TestBench<MODULE>::TestBench(VerilatedContext* p_context, long long total_cycle)
+{
+    this->p_module = new MODULE(p_context);
+    this->p_tracer = nullptr;
+    this->cycle_counter = 0;
+    if (total_cycle <= 0) {
+        this->endless = true;
+        this->total_cycle = 0;
+    }
+    else {
+        this->endless = false;
+        this->total_cycle = total_cycle + 1; // +1 cycle 
+    }
+}
+
+template <class MODULE>
+TestBench<MODULE>::~TestBench(void)
+{
+    this->p_module->final();
+    this->traceOff();
+    delete this->p_module;
+    this->p_module = nullptr;
+}
+
+template <class MODULE>
+VerilatedContext* TestBench<MODULE>::getModuleContext(void)
+{
+    return this->p_module->contextp();
+}
+
+template <class MODULE>
+unsigned long TestBench<MODULE>::getCycleCounter(void)
+{
+    return this->cycle_counter;
+}
+
+template <class MODULE>
+MODULE* TestBench<MODULE>::getModulePointer(void)
+{
+    return this->p_module;
+}
+
+template <class MODULE>
+void TestBench<MODULE>::reset(const unsigned char rst_signal_level)
+{
+    // NOTE: If signal dump ever get truncated, watch the signal type (unsigned int) and value (0 | 1 only)
+    char _rst_signal_level = rst_signal_level > 0 ? 1 : 0;
+    this->p_module->i_rst = _rst_signal_level;
+    this->cycle();
+    this->p_module->i_rst = !_rst_signal_level;
+}
+
+/* 
+// Example to understand verilator's dump tick
+// tick_counter = moment (https://stackoverflow.com/questions/67402131/verilator-explanation-of-verilatedvcdc-dump)
+void cycle(unsigned int times = 1) {
+    while (times > 0) {
+        times--;
+        unsigned int tick_counter = cycle_counter * 2;
+        cycle_counter++;
+
+        p_module->i_clk = 0;
+        p_module->eval();
+        if (p_tracer)
+            p_tracer->dump(tick_counter);
+        tick_counter++;
+        
+        p_module->i_clk = 1;
+        p_module->eval();
+        if (p_tracer) {
+            p_tracer->dump(tick_counter);
+            p_tracer->flush();
+        }
+    }
+}
+ */
+template <class MODULE>
+void TestBench<MODULE>::cycle(unsigned int times)
+{
+    while (times > 0) {
+        times--;
+        // Make sure the tickcount is greater than zero before
+        // we do this
+        // this->getModuleContext()->timeInc(1);
+        this->cycle_counter++;
+
+        // Allow any combinatorial logic to settle before we tick
+        // the clock.  This becomes necessary in the case where
+        // we may have modified or adjusted the inputs prior to
+        // coming into here, since we need all combinatorial logic
+        // to be settled before we call for a clock tick.
+        //
+        this->p_module->i_clk = 0; // (1): this is on the same clock as (2), technically you don't need to set here
+        this->p_module->eval();
+
+        //
+        // Here's the new item:
+        //
+        //	Dump values to our trace file
+        //
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter - 2);
+
+        // Repeat for the positive edge of the clock
+        this->p_module->i_clk = 1;
+        this->p_module->eval();
+        if(this->p_tracer) this->p_tracer->dump(10 * this->cycle_counter);
+
+        // Now the negative edge
+        this->p_module->i_clk = 0; // (2): this is on the same clock as (1)
+        this->p_module->eval();
+        if (this->p_tracer) {
+            // This portion, though, is a touch different.
+            // After dumping our values as they exist on the
+            // negative clock edge ...
+            this->p_tracer->dump(10 * this->cycle_counter + 5);
+            //
+            // We'll also need to make sure we flush any I/O to
+            // the trace file, so that we can use the assert()
+            // function between now and the next tick if we want to.
+            this->p_tracer->flush();
+        }
+    }
+}
+
+template <class MODULE>
+void TestBench<MODULE>::traceOn(const char* vcdfile)
+{
+    // traceEverOn must be called by this module context instance VerilatedContext
+    // I can call it here but it would affect all other module this context is attached to, no very nice
+    // So user must explicitly call traceEverOn outside of this object
+    // (this->getModuleContext())->traceEverOn(true);
+    if (!vcdfile) return;
+    if (!this->p_tracer) {
+        this->p_tracer = new VerilatedVcdC();
+        // Register to module, is VerilatedVcdC safe to delete?
+        this->p_module->trace(this->p_tracer, 0);
+        this->p_tracer->open(vcdfile);
+    }
+}
+
+template <class MODULE>
+void TestBench<MODULE>::traceOff(void)
+{
+    if (this->p_tracer) {
+        this->p_tracer->close();
+        delete this->p_tracer;
+        this->p_tracer = nullptr;
+    }
+}
+
+template <class MODULE>
+bool TestBench<MODULE>::isDone(void)
+{
+    if (this->endless)
+        return (this->getModuleContext())->gotFinish();
+    else {
+        return ((this->cycle_counter >= this->total_cycle) || (this->getModuleContext())->gotFinish());
+    }
+}
+
+#endif // TESTBENCH_H
