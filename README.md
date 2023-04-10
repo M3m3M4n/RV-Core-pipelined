@@ -6,7 +6,7 @@ A simple FPGA based RISC-V processor built from scratch, with 5 stage pipelined 
 
 ## 1. Specs, features
 
-- Piplined, single core, 40MHz processor with RV32I ISA, without ecall, ebreak & fence
+- Piplined FETCH-DECODE-EXEC-MEMORY-WRITE, single core, 40MHz processor with RV32I ISA, without ecall, ebreak & fence
 - Memory mapped peripherals through wishbone bus
     - SDRAM, with 8KB data cache
     - GPIO
@@ -15,9 +15,12 @@ A simple FPGA based RISC-V processor built from scratch, with 5 stage pipelined 
 
 ## 2. Features in progress
 
-  - Interrupt, exception, trap
-  - zicsr extension
-  - Formal verification
+  - ~~Precise exception, and interrupt system~~
+  - ~~Zicsr extension~~
+  - ~~Formal verification~~
+  - ~~Multiple functional units~~
+
+***DUE TO MANY DRASTIC CHANGES TO THE CURRENT PIPELINE IMPLEMENTATION ARE NEEDED IN ORDER TO SUPPORT PLANNED IMPROVEMENTS. THIS PROJECT IS NOW SUSPENDED. I WILL BE WORKING ON A OUT-OF-ORDER CORE WITH THOSE FEATURES ADDED. TBA.***
 
 ## 3. Build instruction
 
